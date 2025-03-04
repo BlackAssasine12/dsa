@@ -1,7 +1,7 @@
 // src/components/MagicSystem.js
 import React, { useState, useEffect, useRef } from 'react';
 import { magicData, levelUpCosts, elementIcons, magicTypeIcons } from '../utils/magicData';
-import '../styles/magicSystem.css';
+
 
 const MagicSystem = ({ character, setCharacter }) => {
   // State for managing magic
