@@ -1,4 +1,6 @@
 /* Base variables */
+@import url("https://fonts.googleapis.com/css2?family=MedievalSharp&family=Spectral:wght@400;600&display=swap");
+
 :root {
     --color-primary: #36251b;
     --color-secondary: #78350f;

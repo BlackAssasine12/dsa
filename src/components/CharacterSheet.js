@@ -13,10 +13,11 @@ import Shop from './Shop';
 import DiceRoller from './DiceRoller';
 import Settings from './Settings';
 import HiddenItems from './HiddenItems';
+import MagicSystem from './MagicSystem';
 import { SaveIcon, UploadIcon } from './Icons';
 import { calculateCharacterAttributes } from '../utils/calculations';
 import { getMagicElementRequirements } from '../utils/helpers';
-import { 
+import {
   defaultCharacter,
   defaultShopData,
   defaultDropdowns,
@@ -49,7 +50,7 @@ const CharacterSheet = () => {
   });
   const [diceResults, setDiceResults] = useState([]);
   const [shopOpen, setShopOpen] = useState(true);
-  
+
   // Theme settings
   const [theme, setTheme] = useState({
     fontFamily: '"Quintessential", serif',
@@ -65,13 +66,13 @@ const CharacterSheet = () => {
 
     // Reset adjustments to default
     const defaultAdjustmentsObj = { ...defaultAdjustments };
-    
+
     const newAdjustments = { ...defaultAdjustmentsObj };
-    
+
     // Update adjustments based on class
     Object.keys(klassenKategorien).forEach(category => {
       if (klassenKategorien[category].includes(selectedClass)) {
-        switch(category) {
+        switch (category) {
           case "Magische Klassen":
             newAdjustments.modifier_magie = 3;
             newAdjustments.modifier_asp = 5;
@@ -122,9 +123,9 @@ const CharacterSheet = () => {
         }
       }
     });
-    
+
     setAdjustments(newAdjustments);
-    
+
     // Update character class
     if (character && character.charakterInfo) {
       setCharacter({
@@ -147,15 +148,15 @@ const CharacterSheet = () => {
   // Handle attribute changes with cost calculation
   const handleAttributeChange = (category, key, value) => {
     if (!character) return;
-    
+
     const numValue = parseFloat(value) || 0;
-    const currentValue = 
+    const currentValue =
       category === 'attribute' ? character.fähigkeiten.attribute[key] :
-      category === 'modifier' ? character.fähigkeiten.modifier[key] :
-      category === 'Magische_Elemente' ? character.Magische_Elemente[key] : 0;
-    
+        category === 'modifier' ? character.fähigkeiten.modifier[key] :
+          category === 'Magische_Elemente' ? character.Magische_Elemente[key] : 0;
+
     const diff = numValue - currentValue;
-    
+
     // Calculate cost based on adjustment
     let adjustmentCategory = category;
     if (category === 'attribute' && key === 'Klugheit') {
@@ -163,19 +164,19 @@ const CharacterSheet = () => {
     } else if (category === 'attribute' && key === 'Körperkraft') {
       adjustmentCategory = 'attribute_Körperkraft';
     }
-    
+
     const costMultiplier = adjustments[adjustmentCategory] || 1;
     const skillCost = diff * costMultiplier;
-    
+
     // Update Gesteigerte if free skill upgrades are not enabled
     let updatedGesteigerte = character.werte.Gesteigerte;
     if (!freeSkillUpgrades) {
       updatedGesteigerte += skillCost;
     }
-    
+
     // Create updated character object
     let updatedCharacter = { ...character };
-    
+
     // Update the specific attribute
     if (category === 'attribute') {
       updatedCharacter.fähigkeiten.attribute = {
@@ -193,13 +194,13 @@ const CharacterSheet = () => {
         [key]: numValue
       };
     }
-    
+
     // Update the Gesteigerte value
     updatedCharacter.werte = {
       ...updatedCharacter.werte,
       Gesteigerte: updatedGesteigerte
     };
-    
+
     setCharacter(updatedCharacter);
   };
 
@@ -207,7 +208,7 @@ const CharacterSheet = () => {
   const rollDice = () => {
     const { count, sides } = diceSettings;
     const results = [];
-    
+
     for (let i = 0; i < count; i++) {
       const result = Math.floor(Math.random() * sides) + 1;
       results.push({
@@ -216,15 +217,15 @@ const CharacterSheet = () => {
         isMin: result === 1
       });
     }
-    
+
     setDiceResults(results);
   };
 
   // Handle dice type selection
   const handleDiceTypeChange = (type) => {
     let sides = 20;
-    
-    switch(type) {
+
+    switch (type) {
       case 'd100':
         sides = 100;
         break;
@@ -243,7 +244,7 @@ const CharacterSheet = () => {
       default:
         sides = 20;
     }
-    
+
     setDiceSettings({
       ...diceSettings,
       type,
@@ -256,7 +257,7 @@ const CharacterSheet = () => {
     const updatedWallet = { ...wallet };
     updatedWallet[currency] += parseFloat(amount);
     setWallet(updatedWallet);
-    
+
     // Update character data
     if (character) {
       setCharacter({
@@ -268,18 +269,18 @@ const CharacterSheet = () => {
 
   const convertWallet = () => {
     let total = wallet.kreuzer + wallet.heller * 10 + wallet.silber * 100 + wallet.dukaten * 1000;
-    
+
     const dukaten = Math.floor(total / 1000);
     total %= 1000;
-    
+
     const silber = Math.floor(total / 100);
     total %= 100;
-    
+
     const heller = Math.floor(total / 10);
     total %= 10;
-    
+
     const kreuzer = Math.floor(total);
-    
+
     const updatedWallet = {
       dukaten,
       silber,
@@ -287,9 +288,9 @@ const CharacterSheet = () => {
       kreuzer,
       wInsg: 0
     };
-    
+
     setWallet(updatedWallet);
-    
+
     // Update character data
     if (character) {
       setCharacter({
@@ -306,7 +307,7 @@ const CharacterSheet = () => {
       const updatedWallet = { ...wallet };
       updatedWallet[currency.toLowerCase()] -= price;
       setWallet(updatedWallet);
-      
+
       // Update character data
       if (character) {
         setCharacter({
@@ -315,10 +316,10 @@ const CharacterSheet = () => {
         });
       }
     }
-    
+
     // Update inventory
     const existingItemIndex = inventory.findIndex(item => item.name === itemName);
-    
+
     if (existingItemIndex >= 0) {
       // Item exists, increment quantity
       const updatedInventory = [...inventory];
@@ -332,7 +333,7 @@ const CharacterSheet = () => {
 
   const removeFromInventory = (itemName) => {
     const existingItemIndex = inventory.findIndex(item => item.name === itemName);
-    
+
     if (existingItemIndex >= 0) {
       const updatedInventory = [...inventory];
       if (updatedInventory[existingItemIndex].quantity > 1) {
@@ -347,17 +348,17 @@ const CharacterSheet = () => {
   // Hide/show item
   const toggleHideItem = (itemType, itemKey) => {
     const itemId = `${itemType}_${itemKey}`;
-    
+
     // Check if item is already hidden
     const isHidden = hiddenItems.some(item => item.id === itemId);
-    
+
     if (isHidden) {
       // Show item
       setHiddenItems(hiddenItems.filter(item => item.id !== itemId));
     } else {
       // Hide item
       let itemValue;
-      
+
       if (itemType === 'attribute') {
         itemValue = character.fähigkeiten.attribute[itemKey];
       } else if (itemType === 'modifier') {
@@ -365,7 +366,7 @@ const CharacterSheet = () => {
       } else if (itemType === 'Magische_Elemente') {
         itemValue = character.Magische_Elemente[itemKey];
       }
-      
+
       setHiddenItems([...hiddenItems, {
         id: itemId,
         type: itemType,
@@ -382,11 +383,11 @@ const CharacterSheet = () => {
       charakter: character,
       inventory
     };
-    
+
     const jsonString = JSON.stringify(characterData, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    
+
     const a = document.createElement('a');
     a.href = url;
     a.download = 'charakter.json';
@@ -399,24 +400,24 @@ const CharacterSheet = () => {
   const loadCharacterData = (event) => {
     const file = event.target.files[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const data = JSON.parse(e.target.result);
         if (data.charakter) {
           setCharacter(data.charakter);
-          
+
           // Set wallet if available
           if (data.charakter.geld) {
             setWallet(data.charakter.geld);
           }
-          
+
           // Set inventory if available
           if (data.inventory) {
             setInventory(data.inventory);
           }
-          
+
           calculateCharacterAttributes(character, setCharacter);
         } else {
           console.error('Invalid character data format');
@@ -431,15 +432,15 @@ const CharacterSheet = () => {
   // Set all attributes to min or max
   const setAllAttributesToMinOrMax = (isMin) => {
     if (!character) return;
-    
+
     const { fähigkeiten, Magische_Elemente, werte } = character;
     const { attribute, modifier } = fähigkeiten;
-    
+
     let totalCost = 0;
     let updatedAttributes = { ...attribute };
     let updatedModifiers = { ...modifier };
     let updatedMagicElements = { ...Magische_Elemente };
-    
+
     // Helper function to update a value and calculate cost
     const updateValue = (currentValue, newValue, costCategory) => {
       const diff = newValue - currentValue;
@@ -447,48 +448,48 @@ const CharacterSheet = () => {
       totalCost += diff * costMultiplier;
       return newValue;
     };
-    
+
     // Update attributes
     Object.keys(attribute).forEach(key => {
       const currentValue = attribute[key];
       const level = werte.level || 1;
       const minValue = 7; // minimum attribute value
       const maxValue = Math.min(21, level + 12); // max depending on level
-      
+
       const newValue = isMin ? minValue : maxValue;
-      
+
       let costCategory = 'attribute';
       if (key === 'Klugheit') costCategory = 'attribute_Klugheit';
       if (key === 'Körperkraft') costCategory = 'attribute_Körperkraft';
-      
+
       updatedAttributes[key] = updateValue(currentValue, newValue, costCategory);
     });
-    
+
     // Update modifiers
     Object.keys(modifier).forEach(key => {
       const currentValue = modifier[key];
       const level = werte.level || 1;
       const minValue = 0; // minimum modifier value
       const maxValue = level + 2; // max depending on level
-      
+
       const newValue = isMin ? minValue : maxValue;
       const costCategory = `modifier_${key}`;
-      
+
       updatedModifiers[key] = updateValue(currentValue, newValue, costCategory);
     });
-    
+
     // Update magic elements
     Object.keys(Magische_Elemente).forEach(key => {
       const currentValue = Magische_Elemente[key];
       const mb = fähigkeiten.sonderwerte.Magiebegabung || 0;
       const minValue = 0; // minimum element value
       const maxValue = Math.min(21, Math.floor(mb / 2)); // max depending on magic aptitude
-      
+
       const newValue = isMin ? minValue : maxValue;
-      
+
       updatedMagicElements[key] = updateValue(currentValue, newValue, 'Magische_Elemente');
     });
-    
+
     // Update character with new values
     const updatedCharacter = {
       ...character,
@@ -503,12 +504,12 @@ const CharacterSheet = () => {
         Gesteigerte: werte.Gesteigerte + (freeSkillUpgrades ? 0 : totalCost)
       }
     };
-    
+
     setCharacter(updatedCharacter);
   };
 
   return (
-    <div 
+    <div
       className="app"
       style={{ fontFamily: theme.fontFamily, color: theme.color }}
     >
@@ -521,8 +522,8 @@ const CharacterSheet = () => {
           <div className="flex flex-wrap gap-4 items-center justify-between">
             <div className="flex flex-wrap gap-4">
               <div className="flex items-center gap-2">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   id="toggleListenersCheckbox"
                   className="input-checkbox"
                   checked={freeSkillUpgrades}
@@ -532,10 +533,10 @@ const CharacterSheet = () => {
                   Kostenloses Steigern
                 </label>
               </div>
-              
+
               <div className="flex items-center gap-2">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   id="toggleHiddenCheckbox"
                   className="input-checkbox"
                   checked={showHiddenItems}
@@ -546,20 +547,20 @@ const CharacterSheet = () => {
                 </label>
               </div>
             </div>
-            
+
             <div className="flex gap-2">
               <label className="btn btn-primary flex items-center">
                 <UploadIcon />
                 <span>Datei laden</span>
-                <input 
-                  type="file" 
-                  className="hidden" 
+                <input
+                  type="file"
+                  className="hidden"
                   accept=".json"
                   onChange={loadCharacterData}
                 />
               </label>
-              
-              <button 
+
+              <button
                 onClick={saveCharacterData}
                 className="btn btn-primary flex items-center"
               >
@@ -577,102 +578,99 @@ const CharacterSheet = () => {
               {/* Character Info and Wallet */}
               <div className="grid grid-2 gap-4">
                 {/* Character Info */}
-                <CharacterInfo 
-                  character={character} 
+                <CharacterInfo
+                  character={character}
                   setCharacter={setCharacter}
                   rassen={rassen}
                   klassen={klassen}
                   handleClassChange={handleClassChange}
                 />
-                
+
                 {/* Wallet */}
-                <Wallet 
+                <Wallet
                   wallet={wallet}
                   updateWallet={updateWallet}
                   convertWallet={convertWallet}
                   setWallet={setWallet}
                 />
               </div>
-              
+
               {/* XP and Combat Values */}
               <div className="grid grid-2 gap-4">
-                <Experience 
+                <Experience
                   character={character}
                   setCharacter={setCharacter}
                 />
-                
-                <CombatValues 
+
+                <CombatValues
                   character={character}
                 />
               </div>
-              
+
               {/* Attributes and Special Values */}
               <div className="grid grid-2 gap-4">
-                <Attributes 
+                <Attributes
                   character={character}
                   handleAttributeChange={handleAttributeChange}
                   hiddenItems={hiddenItems}
                   toggleHideItem={toggleHideItem}
                   setAllAttributesToMinOrMax={setAllAttributesToMinOrMax}
                 />
-                
-                <SpecialValues 
+
+                <SpecialValues
                   character={character}
                   hiddenItems={hiddenItems}
                   toggleHideItem={toggleHideItem}
                 />
               </div>
-              
-              {/* Modifiers and Magic Elements */}
-              <div className="grid grid-2 gap-4">
-                <Modifiers 
+
+              {/* Modifiers and Magic System */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Modifiers
                   character={character}
                   handleAttributeChange={handleAttributeChange}
                   hiddenItems={hiddenItems}
                   toggleHideItem={toggleHideItem}
                 />
-                
-                <MagicElements 
+
+                <MagicSystem
                   character={character}
-                  handleAttributeChange={handleAttributeChange}
-                  hiddenItems={hiddenItems}
-                  toggleHideItem={toggleHideItem}
-                  getMagicElementRequirements={getMagicElementRequirements}
+                  setCharacter={setCharacter}
                 />
               </div>
-              
+
               {/* Hidden Items */}
               {showHiddenItems && hiddenItems.length > 0 && (
-                <HiddenItems 
+                <HiddenItems
                   hiddenItems={hiddenItems}
                   toggleHideItem={toggleHideItem}
                 />
               )}
             </div>
           )}
-          
+
           {/* Inventory Tab */}
           {activeTab === 'inventory' && (
-            <Inventory 
+            <Inventory
               inventory={inventory}
               addToInventory={addToInventory}
               removeFromInventory={removeFromInventory}
             />
           )}
-          
+
           {/* Shop Tab */}
           {activeTab === 'shop' && (
-            <Shop 
+            <Shop
               shopData={shopData}
               shopOpen={shopOpen}
               setShopOpen={setShopOpen}
               addToInventory={addToInventory}
             />
           )}
-          
+
           {/* Dice Tab */}
           {activeTab === 'dice' && (
-            <DiceRoller 
+            <DiceRoller
               diceSettings={diceSettings}
               diceResults={diceResults}
               setDiceSettings={setDiceSettings}
@@ -680,10 +678,10 @@ const CharacterSheet = () => {
               rollDice={rollDice}
             />
           )}
-          
+
           {/* Settings Tab */}
           {activeTab === 'settings' && (
-            <Settings 
+            <Settings
               theme={theme}
               setTheme={setTheme}
               setAllAttributesToMinOrMax={setAllAttributesToMinOrMax}
