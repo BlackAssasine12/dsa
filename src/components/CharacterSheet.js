@@ -14,6 +14,8 @@ import DiceRoller from './DiceRoller';
 import Settings from './Settings';
 import HiddenItems from './HiddenItems';
 import MagicSystem from './MagicSystem';
+import TalentSection from './TalentSection';
+import CombatTalents from './CombatTalents';
 import { SaveIcon, UploadIcon } from './Icons';
 import { calculateCharacterAttributes } from '../utils/calculations';
 import { getMagicElementRequirements } from '../utils/helpers';
@@ -150,10 +152,17 @@ const CharacterSheet = () => {
     if (!character) return;
 
     const numValue = parseFloat(value) || 0;
-    const currentValue =
-      category === 'attribute' ? character.fähigkeiten.attribute[key] :
-        category === 'modifier' ? character.fähigkeiten.modifier[key] :
-          category === 'Magische_Elemente' ? character.Magische_Elemente[key] : 0;
+    let currentValue = 0;
+
+    if (category === 'attribute') {
+      currentValue = character.fähigkeiten.attribute[key] || 0;
+    } else if (category === 'modifier') {
+      currentValue = character.fähigkeiten.modifier[key] || 0;
+    } else if (category === 'Magische_Elemente') {
+      currentValue = character.Magische_Elemente[key] || 0;
+    } else if (category === 'sonderwerte') {
+      currentValue = character.fähigkeiten.sonderwerte[key] || 0;
+    }
 
     const diff = numValue - currentValue;
 
@@ -193,6 +202,11 @@ const CharacterSheet = () => {
         ...updatedCharacter.Magische_Elemente,
         [key]: numValue
       };
+    } else if (category === 'sonderwerte') {
+      updatedCharacter.fähigkeiten.sonderwerte = {
+        ...updatedCharacter.fähigkeiten.sonderwerte,
+        [key]: numValue
+      };
     }
 
     // Update the Gesteigerte value
@@ -201,6 +215,89 @@ const CharacterSheet = () => {
       Gesteigerte: updatedGesteigerte
     };
 
+    setCharacter(updatedCharacter);
+  };
+
+  // Handle talent changes
+  const handleTalentChange = (talentType, talentIndex, newValue) => {
+    if (!character) return;
+
+    // Create a copy of the character
+    const updatedCharacter = {...character};
+    
+    // Get the current talent value
+    let currentTalent;
+    if (talentType === 'Assassinen_Talente') {
+      currentTalent = updatedCharacter.fähigkeiten.Assassinen_Talente[talentIndex];
+    } else if (talentType === 'Talente_1') {
+      currentTalent = updatedCharacter.fähigkeiten.Talente_1[talentIndex];
+    } else if (talentType === 'Talente_2') {
+      currentTalent = updatedCharacter.fähigkeiten.Talente_2[talentIndex];
+    } else if (talentType === 'Handwerkstalente') {
+      currentTalent = updatedCharacter.fähigkeiten.Handwerkstalente[talentIndex];
+    } else if (talentType === 'Kampf_Talente') {
+      // Handle combat talents differently as they have array values
+      return;
+    }
+
+    if (!currentTalent) return;
+
+    // Get the old value
+    const oldValue = currentTalent.Wert || 0;
+    const diff = newValue - oldValue;
+
+    // Calculate cost
+    const costMultiplier = adjustments[talentType] || 3; // Default is 3
+    const skillCost = diff * costMultiplier;
+
+    // Update Gesteigerte if free skill upgrades are not enabled
+    if (!freeSkillUpgrades) {
+      updatedCharacter.werte.Gesteigerte += skillCost;
+    }
+
+    // Update the talent value
+    if (talentType === 'Assassinen_Talente') {
+      updatedCharacter.fähigkeiten.Assassinen_Talente[talentIndex].Wert = newValue;
+    } else if (talentType === 'Talente_1') {
+      updatedCharacter.fähigkeiten.Talente_1[talentIndex].Wert = newValue;
+    } else if (talentType === 'Talente_2') {
+      updatedCharacter.fähigkeiten.Talente_2[talentIndex].Wert = newValue;
+    } else if (talentType === 'Handwerkstalente') {
+      updatedCharacter.fähigkeiten.Handwerkstalente[talentIndex].Wert = newValue;
+    }
+
+    // Update the character
+    setCharacter(updatedCharacter);
+  };
+
+  // Handle combat talent changes
+  const handleCombatTalentChange = (talentName, valueIndex, newValue) => {
+    if (!character) return;
+
+    // Create a copy of the character
+    const updatedCharacter = {...character};
+    
+    // Get the current talent values
+    const currentValues = updatedCharacter.fähigkeiten.Kampf_Talente[talentName];
+    if (!currentValues) return;
+
+    // Get the old value
+    const oldValue = currentValues[valueIndex] || 0;
+    const diff = newValue - oldValue;
+
+    // Calculate cost
+    const costMultiplier = adjustments['Kampf_Talente_2'] || 5; // Default is 5
+    const skillCost = diff * costMultiplier;
+
+    // Update Gesteigerte if free skill upgrades are not enabled
+    if (!freeSkillUpgrades) {
+      updatedCharacter.werte.Gesteigerte += skillCost;
+    }
+
+    // Update the talent value
+    updatedCharacter.fähigkeiten.Kampf_Talente[talentName][valueIndex] = newValue;
+
+    // Update the character
     setCharacter(updatedCharacter);
   };
 
@@ -358,6 +455,7 @@ const CharacterSheet = () => {
     } else {
       // Hide item
       let itemValue;
+      let label = itemKey;
 
       if (itemType === 'attribute') {
         itemValue = character.fähigkeiten.attribute[itemKey];
@@ -365,6 +463,34 @@ const CharacterSheet = () => {
         itemValue = character.fähigkeiten.modifier[itemKey];
       } else if (itemType === 'Magische_Elemente') {
         itemValue = character.Magische_Elemente[itemKey];
+      } else if (itemType === 'sonderwerte') {
+        itemValue = character.fähigkeiten.sonderwerte[itemKey];
+      } else if (itemType === 'Kampf_Talente') {
+        itemValue = character.fähigkeiten.Kampf_Talente[itemKey].join('/');
+      } else if (itemType === 'Assassinen_Talente') {
+        const talent = character.fähigkeiten.Assassinen_Talente.find(t => t.Name === itemKey);
+        if (talent) {
+          itemValue = talent.Wert;
+          label = talent.Name;
+        }
+      } else if (itemType === 'Talente_1') {
+        const talent = character.fähigkeiten.Talente_1.find(t => t.Name === itemKey);
+        if (talent) {
+          itemValue = talent.Wert;
+          label = talent.Name;
+        }
+      } else if (itemType === 'Talente_2') {
+        const talent = character.fähigkeiten.Talente_2.find(t => t.Name === itemKey);
+        if (talent) {
+          itemValue = talent.Wert;
+          label = talent.Name;
+        }
+      } else if (itemType === 'Handwerkstalente') {
+        const talent = character.fähigkeiten.Handwerkstalente.find(t => t.Name === itemKey);
+        if (talent) {
+          itemValue = talent.Wert;
+          label = talent.Name;
+        }
       }
 
       setHiddenItems([...hiddenItems, {
@@ -372,7 +498,7 @@ const CharacterSheet = () => {
         type: itemType,
         key: itemKey,
         value: itemValue,
-        label: itemKey
+        label: label
       }]);
     }
   };
@@ -619,6 +745,7 @@ const CharacterSheet = () => {
 
                 <SpecialValues
                   character={character}
+                  handleAttributeChange={handleAttributeChange}
                   hiddenItems={hiddenItems}
                   toggleHideItem={toggleHideItem}
                 />
@@ -636,6 +763,61 @@ const CharacterSheet = () => {
                 <MagicSystem
                   character={character}
                   setCharacter={setCharacter}
+                />
+              </div>
+              
+              {/* Combat Talents */}
+              <div className="grid grid-cols-1 gap-6">
+                <CombatTalents
+                  character={character}
+                  handleCombatTalentChange={handleCombatTalentChange}
+                  hiddenItems={hiddenItems}
+                  toggleHideItem={toggleHideItem}
+                />
+              </div>
+              
+              {/* Other Talents */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <TalentSection
+                  title="Assassinen-Talente"
+                  talents={character.fähigkeiten.Assassinen_Talente}
+                  talentType="Assassinen_Talente"
+                  character={character}
+                  handleTalentChange={handleTalentChange}
+                  hiddenItems={hiddenItems}
+                  toggleHideItem={toggleHideItem}
+                />
+                
+                <TalentSection
+                  title="Allgemeine Talente"
+                  talents={character.fähigkeiten.Talente_1}
+                  talentType="Talente_1"
+                  character={character}
+                  handleTalentChange={handleTalentChange}
+                  hiddenItems={hiddenItems}
+                  toggleHideItem={toggleHideItem}
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <TalentSection
+                  title="Wissenstalente"
+                  talents={character.fähigkeiten.Talente_2}
+                  talentType="Talente_2"
+                  character={character}
+                  handleTalentChange={handleTalentChange}
+                  hiddenItems={hiddenItems}
+                  toggleHideItem={toggleHideItem}
+                />
+                
+                <TalentSection
+                  title="Handwerkstalente"
+                  talents={character.fähigkeiten.Handwerkstalente}
+                  talentType="Handwerkstalente"
+                  character={character}
+                  handleTalentChange={handleTalentChange}
+                  hiddenItems={hiddenItems}
+                  toggleHideItem={toggleHideItem}
                 />
               </div>
 
