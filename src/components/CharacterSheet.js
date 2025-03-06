@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Navigation from './Navigation';
 import CharacterInfo from './CharacterInfo';
 import Wallet from './Wallet';
@@ -16,7 +16,7 @@ import HiddenItems from './HiddenItems';
 import MagicSystem from './MagicSystem';
 import TalentSection from './TalentSection';
 import CombatTalents from './CombatTalents';
-import { SaveIcon, UploadIcon } from './Icons';
+import { SaveIcon, UploadIcon, BookIcon } from './Icons';
 import { calculateCharacterAttributes } from '../utils/calculations';
 import { getMagicElementRequirements } from '../utils/helpers';
 import {
@@ -52,6 +52,11 @@ const CharacterSheet = () => {
   });
   const [diceResults, setDiceResults] = useState([]);
   const [shopOpen, setShopOpen] = useState(true);
+  const [saveStatus, setSaveStatus] = useState('');
+  const [loadStatus, setLoadStatus] = useState('');
+
+  // File input reference for loading character data
+  const fileInputRef = useRef(null);
 
   // Theme settings
   const [theme, setTheme] = useState({
@@ -505,21 +510,41 @@ const CharacterSheet = () => {
 
   // Save character data
   const saveCharacterData = () => {
-    const characterData = {
-      charakter: character,
-      inventory
-    };
+    try {
+      const characterData = {
+        charakter: character,
+        inventory,
+        hiddenItems,
+        theme,
+        diceSettings,
+        adjustments,
+        freeSkillUpgrades,
+        showHiddenItems
+      };
 
-    const jsonString = JSON.stringify(characterData, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
+      const characterName = character.charakterInfo.name || 'unbenannt';
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const fileName = `${characterName}_${timestamp}.json`;
 
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'charakter.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+      const jsonString = JSON.stringify(characterData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setSaveStatus('Charakter erfolgreich gespeichert!');
+      setTimeout(() => setSaveStatus(''), 3000);
+    } catch (error) {
+      console.error('Fehler beim Speichern:', error);
+      setSaveStatus('Fehler beim Speichern!');
+      setTimeout(() => setSaveStatus(''), 3000);
+    }
   };
 
   // Load character data from file
@@ -531,6 +556,8 @@ const CharacterSheet = () => {
     reader.onload = (e) => {
       try {
         const data = JSON.parse(e.target.result);
+        
+        // Load character data
         if (data.charakter) {
           setCharacter(data.charakter);
 
@@ -538,21 +565,61 @@ const CharacterSheet = () => {
           if (data.charakter.geld) {
             setWallet(data.charakter.geld);
           }
-
-          // Set inventory if available
-          if (data.inventory) {
-            setInventory(data.inventory);
-          }
-
-          calculateCharacterAttributes(character, setCharacter);
-        } else {
-          console.error('Invalid character data format');
         }
+
+        // Load inventory if available
+        if (data.inventory) {
+          setInventory(data.inventory);
+        }
+
+        // Load hidden items if available
+        if (data.hiddenItems) {
+          setHiddenItems(data.hiddenItems);
+        }
+
+        // Load theme if available
+        if (data.theme) {
+          setTheme(data.theme);
+        }
+
+        // Load dice settings if available
+        if (data.diceSettings) {
+          setDiceSettings(data.diceSettings);
+        }
+
+        // Load adjustments if available
+        if (data.adjustments) {
+          setAdjustments(data.adjustments);
+        }
+
+        // Load toggles if available
+        if (data.freeSkillUpgrades !== undefined) {
+          setFreeSkillUpgrades(data.freeSkillUpgrades);
+        }
+
+        if (data.showHiddenItems !== undefined) {
+          setShowHiddenItems(data.showHiddenItems);
+        }
+
+        // Update calculated attributes
+        calculateCharacterAttributes(data.charakter, setCharacter);
+
+        setLoadStatus('Charakter erfolgreich geladen!');
+        setTimeout(() => setLoadStatus(''), 3000);
       } catch (error) {
         console.error('Error parsing character data:', error);
+        setLoadStatus('Fehler beim Laden der Datei!');
+        setTimeout(() => setLoadStatus(''), 3000);
       }
     };
     reader.readAsText(file);
+  };
+
+  // Open file dialog for loading character
+  const openLoadDialog = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
   };
 
   // Set all attributes to min or max
@@ -675,7 +742,10 @@ const CharacterSheet = () => {
             </div>
 
             <div className="flex gap-2">
-              <label className="btn btn-primary flex items-center">
+              <button
+                className="btn btn-primary flex items-center"
+                onClick={openLoadDialog}
+              >
                 <UploadIcon />
                 <span>Datei laden</span>
                 <input
@@ -683,8 +753,9 @@ const CharacterSheet = () => {
                   className="hidden"
                   accept=".json"
                   onChange={loadCharacterData}
+                  ref={fileInputRef}
                 />
-              </label>
+              </button>
 
               <button
                 onClick={saveCharacterData}
@@ -692,8 +763,32 @@ const CharacterSheet = () => {
               >
                 <SaveIcon /> Speichern
               </button>
+              
+              <button
+                onClick={() => {
+                  // Create a new empty character
+                  setCharacter(defaultCharacter);
+                  setWallet(defaultCharacter.geld);
+                  setInventory([
+                    { name: "Schwert", quantity: 1 },
+                    { name: "Lederrüstung", quantity: 1 },
+                    { name: "Proviant", quantity: 5 }
+                  ]);
+                  setHiddenItems([]);
+                }}
+                className="btn btn-danger flex items-center"
+              >
+                <BookIcon /> Neuer Charakter
+              </button>
             </div>
           </div>
+          
+          {/* Save/Load Status Messages */}
+          {(saveStatus || loadStatus) && (
+            <div className={`mt-2 p-2 text-center rounded ${saveStatus.includes('Fehler') || loadStatus.includes('Fehler') ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+              {saveStatus || loadStatus}
+            </div>
+          )}
         </div>
 
         {/* Main content */}
