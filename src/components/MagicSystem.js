@@ -6,7 +6,8 @@ import { magicData, levelUpCosts, elementIcons, magicTypeIcons } from '../utils/
 const MagicSystem = ({ character, setCharacter }) => {
   // State for managing magic
   const [characterMagic, setCharacterMagic] = useState([]);
-  const [advancementPoints, setAdvancementPoints] = useState(20);
+  // Hier wird Steigerungspunkte direkt aus character initialisiert
+  const [advancementPoints, setAdvancementPoints] = useState(character?.werte?.Steigerungspunkte || 20);
   const [selectedElement, setSelectedElement] = useState('');
   const [customElement, setCustomElement] = useState('');
   const [selectedMagicType, setSelectedMagicType] = useState('');
@@ -22,6 +23,11 @@ const MagicSystem = ({ character, setCharacter }) => {
     // Initialize with character data if available
     if (character) {
       setCharacterName(character.charakterInfo?.name || '');
+      
+      // Steigerungspunkte vom Character übernehmen, wenn sie sich ändern
+      if (character.werte && character.werte.Steigerungspunkte !== undefined) {
+        setAdvancementPoints(character.werte.Steigerungspunkte);
+      }
       
       // If the character has magic data, use it
       if (character.Magische_Elemente) {
@@ -39,7 +45,7 @@ const MagicSystem = ({ character, setCharacter }) => {
         setCharacterMagic(initialMagic);
       }
     }
-  }, [character]);
+  }, [character]); // Dieser useEffect wird ausgeführt, wenn sich character ändert
 
   // Function to get icon for element or magic type
   const getIcon = (type, key) => {
@@ -134,14 +140,16 @@ const MagicSystem = ({ character, setCharacter }) => {
     updatedMagic[index].level++;
     setCharacterMagic(updatedMagic);
     
-    setAdvancementPoints(prevPoints => prevPoints - cost);
+    // Neue Punkte berechnen und setzen
+    const newPoints = advancementPoints - cost;
+    setAdvancementPoints(newPoints);
     
-    // Update character state with updated magic
-    updateCharacterWithMagic(updatedMagic);
+    // Update character state with updated magic and new advancement points
+    updateCharacterWithMagic(updatedMagic, newPoints);
   };
   
   // Update character state with magic data
-  const updateCharacterWithMagic = (magicList) => {
+  const updateCharacterWithMagic = (magicList, newAdvancementPoints = null) => {
     if (!character || !setCharacter) return;
     
     // Convert to the format used by the character sheet
@@ -151,6 +159,15 @@ const MagicSystem = ({ character, setCharacter }) => {
     magicData.elements.forEach(element => {
       magicElements[element] = 0;
     });
+    
+    // Initialize existing elements from character (for those not in magicData.elements)
+    if (character.Magische_Elemente) {
+      Object.keys(character.Magische_Elemente).forEach(element => {
+        if (!magicElements.hasOwnProperty(element)) {
+          magicElements[element] = 0;
+        }
+      });
+    }
     
     // Add custom elements with value 0
     magicList.forEach(magic => {
@@ -167,10 +184,20 @@ const MagicSystem = ({ character, setCharacter }) => {
     });
     
     // Update character state
-    setCharacter({
+    const updatedCharacter = {
       ...character,
       Magische_Elemente: magicElements
-    });
+    };
+    
+    // Wenn neue Steigerungspunkte übergeben wurden, aktualisiere diese auch im Character
+    if (newAdvancementPoints !== null && character.werte) {
+      updatedCharacter.werte = {
+        ...character.werte,
+        Steigerungspunkte: newAdvancementPoints
+      };
+    }
+    
+    setCharacter(updatedCharacter);
   };
   
   // Add advancement points
@@ -178,7 +205,21 @@ const MagicSystem = ({ character, setCharacter }) => {
     const pointsToAdd = parseInt(prompt('Wie viele Steigerungspunkte möchtest du hinzufügen?', '5'));
     
     if (!isNaN(pointsToAdd) && pointsToAdd > 0) {
-      setAdvancementPoints(prev => prev + pointsToAdd);
+      // Neue Punkte berechnen
+      const newPoints = advancementPoints + pointsToAdd;
+      setAdvancementPoints(newPoints);
+      
+      // Auch im Character-Objekt aktualisieren
+      if (character && character.werte) {
+        const updatedCharacter = {
+          ...character,
+          werte: {
+            ...character.werte,
+            Steigerungspunkte: newPoints
+          }
+        };
+        setCharacter(updatedCharacter);
+      }
     }
   };
   
@@ -236,13 +277,18 @@ const MagicSystem = ({ character, setCharacter }) => {
         // Set magic data
         setCharacterMagic(loadedData.magic);
         
-        // Set advancement points if available
+        // Deal with advancement points
+        let newAdvancementPoints;
         if (loadedData.advancementPoints !== undefined) {
-          setAdvancementPoints(loadedData.advancementPoints);
+          newAdvancementPoints = loadedData.advancementPoints;
+          setAdvancementPoints(newAdvancementPoints);
+        } else {
+          // If not in file, use character's current points
+          newAdvancementPoints = character?.werte?.Steigerungspunkte || 20;
         }
         
-        // Update character with loaded magic
-        updateCharacterWithMagic(loadedData.magic);
+        // Update character with loaded magic and advancement points
+        updateCharacterWithMagic(loadedData.magic, newAdvancementPoints);
         
         alert('Magie-Daten erfolgreich geladen!');
       } catch (error) {
