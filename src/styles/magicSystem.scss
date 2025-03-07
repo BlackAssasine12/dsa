@@ -1,15 +1,4 @@
-// Variables
-$primary-color: #8B4513;
-$secondary-color: #A0522D;
-$accent-color: #CD853F;
-$text-color: #3A2718;
-$bg-color: #F5F0E1;
-$card-bg: #FFF8E1;
-$border-color: #8B4513;
-$border-radius: 5px;
-$box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-$positive-color: #2E8B57; // Grün für positive Aktionen
-$negative-color: #8B0000; // Rot für negative Aktionen
+@import "variables";
 
 // Mixins
 @mixin flex-center {
